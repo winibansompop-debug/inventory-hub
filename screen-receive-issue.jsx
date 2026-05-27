@@ -1,42 +1,59 @@
 // Goods Receive + Goods Issue screens — share line-item editor with camera
 
 function ScreenReceive() {
-  const { items, locations, receiveGoods, photos, setPhotos } = useStore();
-  const [lines, setLines] = useState([{ id: Date.now(), sku: "", qty: 1, photo: null }]);
-  const [toLoc, setToLoc] = useState("WH-A");
+  const { items, locations, receiveGoods, updateItem, setPhotos } = useStore();
+  const [lines, setLines] = useState([{ id: Date.now(), sku: "", qty: 1, photo: null, cost: "" }]);
+  const [toLoc, setToLoc] = useState("");
   const [ref, setRef] = useState(genRef("PO"));
   const [supplier, setSupplier] = useState("");
   const [note, setNote] = useState("");
   const [cameraFor, setCameraFor] = useState(null); // line id
   const [submitting, setSubmitting] = useState(false);
 
-  const addLine = () => setLines(l => [...l, { id: Date.now(), sku: "", qty: 1, photo: null }]);
+  // default ไปยัง location ตัวแรกที่ไม่ใช่ transit เมื่อ locations โหลดเสร็จ
+  useEffect(() => {
+    if (!toLoc && locations.length) {
+      const first = locations.find(l => l.kind !== "transit") || locations[0];
+      setToLoc(first.id);
+    }
+  }, [locations, toLoc]);
+
+  const addLine = () => setLines(l => [...l, { id: Date.now(), sku: "", qty: 1, photo: null, cost: "" }]);
   const updLine = (id, patch) => setLines(l => l.map(x => x.id === id ? { ...x, ...patch } : x));
   const rmLine = (id) => setLines(l => l.length > 1 ? l.filter(x => x.id !== id) : l);
 
+  const lineCost = (l) => {
+    if (l.cost !== "" && l.cost !== undefined && l.cost !== null) return parseFloat(l.cost) || 0;
+    const item = items.find(i => i.sku === l.sku);
+    return item ? item.cost : 0;
+  };
+
   const totalQty = lines.reduce((a, b) => a + (parseInt(b.qty) || 0), 0);
-  const totalValue = lines.reduce((a, b) => {
-    const item = items.find(i => i.sku === b.sku);
-    return a + (item ? item.cost * (parseInt(b.qty) || 0) : 0);
-  }, 0);
+  const totalValue = lines.reduce((a, b) => a + lineCost(b) * (parseInt(b.qty) || 0), 0);
 
   const canSubmit = lines.every(l => l.sku && parseInt(l.qty) > 0) && toLoc && ref;
 
   const submit = () => {
     if (!canSubmit) return;
     setSubmitting(true);
-    setTimeout(() => {
-      lines.forEach(l => {
+    setTimeout(async () => {
+      for (const l of lines) {
+        // ถ้าแก้ราคาทุน → อัปเดต item cost ใน DB
+        const item = items.find(i => i.sku === l.sku);
+        const newCost = lineCost(l);
+        if (item && newCost > 0 && newCost !== item.cost) {
+          await updateItem(l.sku, { cost: newCost });
+        }
         receiveGoods({ sku: l.sku, qty: parseInt(l.qty), to: toLoc, ref, note });
         if (l.photo) {
           setPhotos(prev => ({ ...prev, [l.sku]: [l.photo, ...(prev[l.sku] || [])].slice(0, 6) }));
         }
-      });
-      setLines([{ id: Date.now(), sku: "", qty: 1, photo: null }]);
+      }
+      setLines([{ id: Date.now(), sku: "", qty: 1, photo: null, cost: "" }]);
       setRef(genRef("PO"));
       setNote("");
       setSubmitting(false);
-    }, 500);
+    }, 300);
   };
 
   return (
@@ -145,6 +162,9 @@ function ScreenReceive() {
 
 function ReceiveLine({ idx, line, items, onChange, onRemove, onCamera }) {
   const item = items.find(i => i.sku === line.sku);
+  const costVal = (line.cost !== "" && line.cost !== undefined && line.cost !== null)
+    ? line.cost
+    : (item ? item.cost : "");
   return (
     <div style={{ display: "grid", gridTemplateColumns: "32px 56px 1fr 100px 40px 40px", gap: 10, alignItems: "center", padding: "10px 10px", borderBottom: "1px solid var(--border)" }}>
       <div className="mono text-sm muted" style={{ textAlign: "center" }}>{String(idx + 1).padStart(2, "0")}</div>
@@ -158,11 +178,23 @@ function ReceiveLine({ idx, line, items, onChange, onRemove, onCamera }) {
         )}
       </div>
       <div className="col gap-4">
-        <select className="select" value={line.sku} onChange={e => onChange({ sku: e.target.value })} style={{ padding: "6px 10px", fontSize: 13 }}>
+        <select className="select" value={line.sku} onChange={e => onChange({ sku: e.target.value, cost: "" })} style={{ padding: "6px 10px", fontSize: 13 }}>
           <option value="">— เลือกสินค้า —</option>
           {items.map(it => <option key={it.sku} value={it.sku}>{it.sku} · {it.name}</option>)}
         </select>
-        {item && <div className="text-sm muted">ทุน {fmtBaht(item.cost)} · ขาย {fmtBaht(item.price)}</div>}
+        {item && (
+          <div className="row gap-8" style={{ alignItems: "center", flexWrap: "wrap" }}>
+            <span className="text-sm muted">ทุน/ชิ้น ฿</span>
+            <input
+              className="input mono"
+              style={{ width: 90, padding: "2px 6px", fontSize: 12 }}
+              value={costVal}
+              onChange={e => onChange({ cost: e.target.value.replace(/[^\d.]/g, "") })}
+              title="แก้ราคาทุนได้ — จะอัปเดตราคาทุนของสินค้านี้"
+            />
+            <span className="text-sm muted">· ขาย {fmtBaht(item.price)}</span>
+          </div>
+        )}
       </div>
       <div className="row gap-4" style={{ background: "var(--bg-soft)", borderRadius: 6, padding: 2 }}>
         <button className="btn btn-ghost btn-icon" style={{ padding: 4 }} onClick={() => onChange({ qty: Math.max(1, (parseInt(line.qty) || 0) - 1) })}><Icon name="minus" size={12} /></button>
@@ -179,8 +211,18 @@ function ReceiveLine({ idx, line, items, onChange, onRemove, onCamera }) {
 function CameraModal({ onClose, onCapture }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const fileRef = useRef(null);
   const [streaming, setStreaming] = useState(false);
   const [err, setErr] = useState(null);
+
+  const handleFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setErr("กรุณาเลือกไฟล์รูปภาพ"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => onCapture(ev.target.result);
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     let stream;
@@ -251,14 +293,20 @@ function CameraModal({ onClose, onCapture }) {
             <canvas ref={canvasRef} style={{ display: "none" }} />
           </div>
           <div className="text-sm muted" style={{ marginTop: 10, textAlign: "center" }}>
-            จัดสินค้าให้อยู่ในกรอบ แล้วกดปุ่มเพื่อถ่าย
+            จัดสินค้าให้อยู่ในกรอบ แล้วกดปุ่มเพื่อถ่าย — หรืออัพโหลดรูปจากเครื่อง
           </div>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
         </div>
         <div className="modal-foot" style={{ justifyContent: "space-between" }}>
           <button className="btn" onClick={onClose}>ยกเลิก</button>
-          <button className="btn btn-accent" onClick={capture}>
-            <Icon name="camera" size={14} /> ถ่ายรูป
-          </button>
+          <div className="row gap-8">
+            <button className="btn" onClick={() => fileRef.current && fileRef.current.click()}>
+              <Icon name="download" size={14} /> อัพโหลดรูป
+            </button>
+            <button className="btn btn-accent" onClick={capture}>
+              <Icon name="camera" size={14} /> ถ่ายรูป
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -269,8 +317,12 @@ function CameraModal({ onClose, onCapture }) {
 function ScreenIssue() {
   const { items, locations, issueGoods, stock } = useStore();
   const [lines, setLines] = useState([{ id: Date.now(), sku: "", qty: 1 }]);
-  const [fromLoc, setFromLoc] = useState("WH-A");
+  const [fromLoc, setFromLoc] = useState("");
   const [ref, setRef] = useState(genRef("SO"));
+
+  useEffect(() => {
+    if (!fromLoc && locations.length) setFromLoc(locations[0].id);
+  }, [locations, fromLoc]);
   const [customer, setCustomer] = useState("");
   const [reason, setReason] = useState("sale");
   const [note, setNote] = useState("");

@@ -267,6 +267,18 @@ function StoreProvider({ children }) {
     return true;
   }, [pushToast]);
 
+  const updateItem = useCallback(async (sku, patch) => {
+    const { error } = await db.from('items').update(patch).eq('sku', sku);
+    if (error) {
+      pushToast('แก้ไขไม่สำเร็จ: ' + error.message, 'err');
+      return false;
+    }
+    setItems(prev => prev.map(i => i.sku === sku
+      ? { ...i, ...patch, desc: patch.description !== undefined ? patch.description : i.desc }
+      : i));
+    return true;
+  }, [pushToast]);
+
   const deleteItem = useCallback(async (sku) => {
     await db.from('movements').delete().eq('sku', sku);
     const { error } = await db.from('items').delete().eq('sku', sku);
@@ -321,7 +333,7 @@ function StoreProvider({ children }) {
     seriesMap: seriesMap.current,
     totalStock, totalValue, lowStock,
     receiveGoods, issueGoods, transferGoods,
-    addItem, deleteItem,
+    addItem, updateItem, deleteItem,
     totalForSku, stockByLocation, sellerRanking,
     setPhotos, setRole, pushToast,
   };

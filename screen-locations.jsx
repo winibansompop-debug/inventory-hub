@@ -171,11 +171,17 @@ function ScreenLocations({ initialLoc, onNav }) {
 function TransferModal({ defaultFrom, onClose }) {
   const { items, locations, stock, transferGoods } = useStore();
   const [sku, setSku] = useState("");
-  const [from, setFrom] = useState(defaultFrom || "WH-A");
-  const [to, setTo] = useState("SR-1");
+  const [from, setFrom] = useState(defaultFrom || "");
+  const [to, setTo] = useState("");
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!locations.length) return;
+    if (!from) setFrom(locations[0].id);
+    if (!to) setTo((locations.find(l => l.id !== (from || locations[0].id)) || locations[0]).id);
+  }, [locations]); // eslint-disable-line
 
   const avail = stock[sku]?.[from] || 0;
   const exceeded = qty > avail;

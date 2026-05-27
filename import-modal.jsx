@@ -6,7 +6,7 @@ function ImportModal({ onClose }) {
   const [rows, setRows] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [mode, setMode] = useState("add"); // add | set
-  const [defaultLoc, setDefaultLoc] = useState("WH-A");
+  const [defaultLoc, setDefaultLoc] = useState("");
   const [filename, setFilename] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef(null);
@@ -14,6 +14,9 @@ function ImportModal({ onClose }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { loadXLSX(); }, []);
+  useEffect(() => {
+    if (!defaultLoc && locations.length) setDefaultLoc(locations[0].id);
+  }, [locations, defaultLoc]);
 
   const parseFile = async (file) => {
     setFilename(file.name);
