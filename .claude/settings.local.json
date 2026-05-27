@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m http.server 8000)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp"
+    ]
+  }
+}

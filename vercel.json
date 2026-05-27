@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/", "destination": "/Inventory%20Management.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)\\.jsx",
+      "headers": [
+        { "key": "Content-Type", "value": "text/javascript; charset=utf-8" }
+      ]
+    }
+  ]
+}
