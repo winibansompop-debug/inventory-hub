@@ -7,6 +7,8 @@ function ScreenItems({ initialSku, onNav }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState(initialSku || null);
   const [importOpen, setImportOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const categories = useMemo(() => ["all", ...new Set(items.map(i => i.category))], [items]);
 
@@ -35,7 +37,7 @@ function ScreenItems({ initialSku, onNav }) {
         <div className="row gap-8">
           <button className="btn" onClick={() => setImportOpen(true)}><Icon name="download" size={14} stroke={1.8} /> นำเข้า Excel</button>
           <button className="btn"><Icon name="download" size={14} /> ส่งออก CSV</button>
-          <button className="btn btn-primary"><Icon name="plus" size={14} /> เพิ่มสินค้า</button>
+          <button className="btn btn-primary" onClick={() => setAddOpen(true)}><Icon name="plus" size={14} /> เพิ่มสินค้า</button>
         </div>
       </div>
 
@@ -99,8 +101,8 @@ function ScreenItems({ initialSku, onNav }) {
                         <span style={{ fontFamily: "var(--mono)", fontWeight: 500 }}>{sales30d[it.sku] || 0}</span>
                       </div>
                     </td>
-                    <td>
-                      <button className="btn btn-sm btn-ghost"><Icon name="eye" size={12} /> ดู</button>
+                    <td onClick={e => e.stopPropagation()}>
+                      <DeleteRowCell sku={it.sku} confirm={deleteConfirm} setConfirm={setDeleteConfirm} onView={() => setSelected(it.sku)} />
                     </td>
                   </tr>
                 );
@@ -115,7 +117,124 @@ function ScreenItems({ initialSku, onNav }) {
         <ItemDetailModal sku={selected} onClose={() => setSelected(null)} onNav={onNav} />
       )}
       {importOpen && <ImportModal onClose={() => setImportOpen(false)} />}
+      {addOpen && <AddItemModal onClose={() => setAddOpen(false)} />}
     </div>
+  );
+}
+
+// ========== Delete confirm inline cell ==========
+function DeleteRowCell({ sku, confirm, setConfirm, onView }) {
+  const { deleteItem } = useStore();
+  const isConfirm = confirm === sku;
+
+  if (isConfirm) {
+    return (
+      <div className="row gap-4" style={{ whiteSpace: "nowrap" }}>
+        <button
+          className="btn btn-sm"
+          style={{ background: "var(--danger)", color: "#fff", border: "none" }}
+          onClick={async () => { await deleteItem(sku); setConfirm(null); }}
+        >ยืนยันลบ</button>
+        <button className="btn btn-sm btn-ghost" onClick={() => setConfirm(null)}>ยกเลิก</button>
+      </div>
+    );
+  }
+  return (
+    <div className="row gap-4">
+      <button className="btn btn-sm btn-ghost" onClick={onView}><Icon name="eye" size={12} /> ดู</button>
+      <button
+        className="btn btn-sm btn-ghost"
+        style={{ color: "var(--danger)" }}
+        onClick={() => setConfirm(sku)}
+        title="ลบสินค้า"
+      ><Icon name="trash" size={12} /></button>
+    </div>
+  );
+}
+
+// ========== Add Item Modal ==========
+function AddItemModal({ onClose }) {
+  const { items, addItem } = useStore();
+  const [form, setForm] = useState({
+    sku: '', name: '', category: '', color: '',
+    price: '', cost: '', reorder: '5', supplier: '', description: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!form.sku.trim()) { setError('กรุณากรอก SKU'); return; }
+    if (!form.name.trim()) { setError('กรุณากรอกชื่อสินค้า'); return; }
+    if (items.find(i => i.sku === form.sku.trim())) { setError('SKU นี้มีอยู่แล้ว'); return; }
+
+    setSaving(true);
+    const ok = await addItem({
+      sku:         form.sku.trim().toUpperCase(),
+      name:        form.name.trim(),
+      category:    form.category.trim(),
+      color:       form.color.trim(),
+      price:       parseFloat(form.price) || 0,
+      cost:        parseFloat(form.cost) || 0,
+      reorder:     parseInt(form.reorder) || 0,
+      supplier:    form.supplier.trim(),
+      description: form.description.trim(),
+    });
+    setSaving(false);
+    if (ok) onClose();
+  };
+
+  const Field = ({ label, k, type = 'text', placeholder = '', half = false }) => (
+    <div className="col gap-4" style={half ? { flex: '1 1 45%' } : { flex: '1 1 100%' }}>
+      <label className="text-sm muted">{label}</label>
+      <input
+        className="input"
+        type={type}
+        placeholder={placeholder}
+        value={form[k]}
+        onChange={set(k)}
+        min={type === 'number' ? 0 : undefined}
+      />
+    </div>
+  );
+
+  return (
+    <Modal title="เพิ่มสินค้าใหม่" onClose={onClose}
+      footer={
+        <div className="row gap-8" style={{ justifyContent: 'flex-end' }}>
+          {error && <span style={{ color: 'var(--danger)', fontSize: 13, marginRight: 'auto' }}>{error}</span>}
+          <button className="btn" onClick={onClose}>ยกเลิก</button>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={saving}>
+            {saving ? 'กำลังบันทึก...' : 'บันทึกสินค้า'}
+          </button>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+        <Field label="SKU *" k="sku" placeholder="เช่น CHR-NEW-01" half />
+        <Field label="ชื่อสินค้า *" k="name" placeholder="ชื่อสินค้า" half />
+        <Field label="หมวดหมู่" k="category" placeholder="เช่น เก้าอี้, โซฟา" half />
+        <Field label="สี" k="color" placeholder="เช่น ดำ, ขาว" half />
+        <Field label="ราคาขาย (฿)" k="price" type="number" placeholder="0" half />
+        <Field label="ราคาทุน (฿)" k="cost" type="number" placeholder="0" half />
+        <Field label="Reorder Point" k="reorder" type="number" placeholder="5" half />
+        <Field label="Supplier" k="supplier" placeholder="ชื่อ Supplier" half />
+        <div className="col gap-4" style={{ flex: '1 1 100%' }}>
+          <label className="text-sm muted">รายละเอียด</label>
+          <textarea
+            className="input"
+            rows={3}
+            style={{ resize: 'vertical' }}
+            placeholder="รายละเอียดสินค้า..."
+            value={form.description}
+            onChange={set('description')}
+          />
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -138,7 +257,9 @@ function DistBar({ sku }) {
 
 // ========== Item Detail Modal ==========
 function ItemDetailModal({ sku, onClose, onNav }) {
-  const { items, stock, locations, photos, sales30d, seriesMap, movements, totalForSku } = useStore();
+  const { items, stock, locations, photos, sales30d, seriesMap, movements, totalForSku, deleteItem } = useStore();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const item = items.find(i => i.sku === sku);
   if (!item) return null;
   const total = totalForSku(sku);
@@ -148,8 +269,35 @@ function ItemDetailModal({ sku, onClose, onNav }) {
   const dailyAvg = (monthly / 30).toFixed(1);
   const daysOfSupply = monthly > 0 ? Math.floor(total / (monthly / 30)) : 999;
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    await deleteItem(sku);
+    onClose();
+  };
+
   return (
-    <Modal title={item.name} onClose={onClose} wide>
+    <Modal title={item.name} onClose={onClose} wide
+      footer={
+        <div className="row gap-8" style={{ justifyContent: 'flex-end' }}>
+          {!confirmDelete ? (
+            <button className="btn btn-ghost" style={{ color: 'var(--danger)', marginRight: 'auto' }}
+              onClick={() => setConfirmDelete(true)}>
+              <Icon name="trash" size={13} /> ลบสินค้า
+            </button>
+          ) : (
+            <div className="row gap-8" style={{ marginRight: 'auto', alignItems: 'center' }}>
+              <span className="text-sm" style={{ color: 'var(--danger)' }}>ยืนยันลบสินค้านี้?</span>
+              <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
+                onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'กำลังลบ...' : 'ยืนยัน'}
+              </button>
+              <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(false)}>ยกเลิก</button>
+            </div>
+          )}
+          <button className="btn" onClick={onClose}>ปิด</button>
+        </div>
+      }
+    >
       <div className="grid-2" style={{ gap: 22 }}>
         <div>
           {/* Photo gallery */}

@@ -35,6 +35,7 @@ const Icon = ({ name, size = 16, stroke = 1.6 }) => {
     location: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
     "list": <><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>,
     qr: <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="14"/><line x1="14" y1="17" x2="14" y2="20"/><line x1="17" y1="14" x2="17" y2="17"/><line x1="17" y1="20" x2="20" y2="20"/><line x1="20" y1="14" x2="20" y2="14"/></>,
+    trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>,
   };
   return (
     <svg className="ic" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">

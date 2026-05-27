@@ -256,6 +256,32 @@ function StoreProvider({ children }) {
     }
   }, [pushToast, addLocalMv]);
 
+  const addItem = useCallback(async (itemData) => {
+    const { error } = await db.from('items').insert(itemData);
+    if (error) {
+      pushToast('เพิ่มสินค้าไม่สำเร็จ: ' + error.message, 'err');
+      return false;
+    }
+    setItems(prev => [...prev, { ...itemData, desc: itemData.description || '' }].sort((a, b) => a.name.localeCompare(b.name, 'th')));
+    pushToast(`เพิ่ม "${itemData.name}" แล้ว`, 'ok');
+    return true;
+  }, [pushToast]);
+
+  const deleteItem = useCallback(async (sku) => {
+    await db.from('movements').delete().eq('sku', sku);
+    const { error } = await db.from('items').delete().eq('sku', sku);
+    if (error) {
+      pushToast('ลบสินค้าไม่สำเร็จ: ' + error.message, 'err');
+      return false;
+    }
+    setItems(prev => prev.filter(i => i.sku !== sku));
+    setStock(prev => { const n = { ...prev }; delete n[sku]; return n; });
+    setSales30d(prev => { const n = { ...prev }; delete n[sku]; return n; });
+    setMovements(prev => prev.filter(m => m.sku !== sku));
+    pushToast('ลบสินค้าแล้ว', 'ok');
+    return true;
+  }, [pushToast]);
+
   const totalForSku = useCallback((sku) => {
     return Object.values(stock[sku] || {}).reduce((a, b) => a + b, 0);
   }, [stock]);
@@ -295,6 +321,7 @@ function StoreProvider({ children }) {
     seriesMap: seriesMap.current,
     totalStock, totalValue, lowStock,
     receiveGoods, issueGoods, transferGoods,
+    addItem, deleteItem,
     totalForSku, stockByLocation, sellerRanking,
     setPhotos, setRole, pushToast,
   };
