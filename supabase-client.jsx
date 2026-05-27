@@ -5,8 +5,8 @@
 // ============================================================
 
 (function () {
-  var SUPABASE_URL     = 'https://YOUR_PROJECT_REF.supabase.co';
-  var SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE';
+  var SUPABASE_URL     = 'https://tyfrohwsjzlvwjmameku.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5ZnJvaHdzanpsdndqbWFtZWt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NTE0ODMsImV4cCI6MjA5NTQyNzQ4M30.llp37NiMh8rb8n4Vsb-BbtlOPVyuFT9ch8pvqu4kBkc';
 
   if (!window.supabase) {
     console.error('[Inventory Hub] Supabase JS ไม่ได้โหลด — ตรวจสอบ script tag ใน HTML');
