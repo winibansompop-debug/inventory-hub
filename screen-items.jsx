@@ -187,19 +187,7 @@ function AddItemModal({ onClose }) {
     if (ok) onClose();
   };
 
-  const Field = ({ label, k, type = 'text', placeholder = '', half = false }) => (
-    <div className="col gap-4" style={half ? { flex: '1 1 45%' } : { flex: '1 1 100%' }}>
-      <label className="text-sm muted">{label}</label>
-      <input
-        className="input"
-        type={type}
-        placeholder={placeholder}
-        value={form[k]}
-        onChange={set(k)}
-        min={type === 'number' ? 0 : undefined}
-      />
-    </div>
-  );
+  const half = { flex: '1 1 45%' };
 
   return (
     <Modal title="เพิ่มสินค้าใหม่" onClose={onClose}
@@ -214,14 +202,38 @@ function AddItemModal({ onClose }) {
       }
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-        <Field label="SKU *" k="sku" placeholder="เช่น CHR-NEW-01" half />
-        <Field label="ชื่อสินค้า *" k="name" placeholder="ชื่อสินค้า" half />
-        <Field label="หมวดหมู่" k="category" placeholder="เช่น เก้าอี้, โซฟา" half />
-        <Field label="สี" k="color" placeholder="เช่น ดำ, ขาว" half />
-        <Field label="ราคาขาย (฿)" k="price" type="number" placeholder="0" half />
-        <Field label="ราคาทุน (฿)" k="cost" type="number" placeholder="0" half />
-        <Field label="Reorder Point" k="reorder" type="number" placeholder="5" half />
-        <Field label="Supplier" k="supplier" placeholder="ชื่อ Supplier" half />
+        <div className="col gap-4" style={half}>
+          <label className="text-sm muted">SKU *</label>
+          <input className="input" placeholder="เช่น CHR-NEW-01" value={form.sku} onChange={set('sku')} />
+        </div>
+        <div className="col gap-4" style={half}>
+          <label className="text-sm muted">ชื่อสินค้า *</label>
+          <input className="input" placeholder="ชื่อสินค้า" value={form.name} onChange={set('name')} />
+        </div>
+        <div className="col gap-4" style={half}>
+          <label className="text-sm muted">หมวดหมู่</label>
+          <input className="input" placeholder="เช่น เก้าอี้, โซฟา" value={form.category} onChange={set('category')} />
+        </div>
+        <div className="col gap-4" style={half}>
+          <label className="text-sm muted">สี</label>
+          <input className="input" placeholder="เช่น ดำ, ขาว" value={form.color} onChange={set('color')} />
+        </div>
+        <div className="col gap-4" style={half}>
+          <label className="text-sm muted">ราคาขาย (฿)</label>
+          <input className="input" type="number" min={0} placeholder="0" value={form.price} onChange={set('price')} />
+        </div>
+        <div className="col gap-4" style={half}>
+          <label className="text-sm muted">ราคาทุน (฿)</label>
+          <input className="input" type="number" min={0} placeholder="0" value={form.cost} onChange={set('cost')} />
+        </div>
+        <div className="col gap-4" style={half}>
+          <label className="text-sm muted">Reorder Point</label>
+          <input className="input" type="number" min={0} placeholder="5" value={form.reorder} onChange={set('reorder')} />
+        </div>
+        <div className="col gap-4" style={half}>
+          <label className="text-sm muted">Supplier</label>
+          <input className="input" placeholder="ชื่อ Supplier" value={form.supplier} onChange={set('supplier')} />
+        </div>
         <div className="col gap-4" style={{ flex: '1 1 100%' }}>
           <label className="text-sm muted">รายละเอียด</label>
           <textarea
