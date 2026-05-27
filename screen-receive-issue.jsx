@@ -33,6 +33,13 @@ function ScreenReceive() {
 
   const canSubmit = lines.every(l => l.sku && parseInt(l.qty) > 0) && toLoc && ref;
 
+  const receiveHint =
+    !lines.some(l => l.sku)                       ? "กรุณาเลือกสินค้าก่อน" :
+    !lines.every(l => l.sku)                      ? "ยังมีรายการที่ยังไม่ได้เลือกสินค้า" :
+    !lines.every(l => parseInt(l.qty) > 0)        ? "กรุณาระบุจำนวนให้มากกว่า 0" :
+    !toLoc                                         ? "กรุณาเลือก Location" :
+    !ref                                           ? "กรุณาระบุเลขที่ใบรับ" : "";
+
   const submit = () => {
     if (!canSubmit) return;
     setSubmitting(true);
@@ -135,6 +142,12 @@ function ScreenReceive() {
           >
             {submitting ? <>กำลังบันทึก...</> : <><Icon name="check" size={14} /> ยืนยันรับเข้า {totalQty} ชิ้น</>}
           </button>
+
+          {!canSubmit && !submitting && (
+            <div className="text-sm" style={{ color: "var(--warn)", textAlign: "center", marginTop: -4 }}>
+              ⚠ {receiveHint}
+            </div>
+          )}
 
           <div className="card card-pad">
             <div className="text-sm muted" style={{ marginBottom: 8 }}>ทิป</div>
@@ -344,6 +357,13 @@ function ScreenIssue() {
     return parseInt(l.qty) <= avail;
   });
 
+  const issueHint =
+    !lines.some(l => l.sku)                ? "กรุณาเลือกสินค้าก่อน" :
+    !lines.every(l => l.sku)               ? "ยังมีรายการที่ยังไม่ได้เลือกสินค้า" :
+    !lines.every(l => parseInt(l.qty) > 0) ? "กรุณาระบุจำนวนให้มากกว่า 0" :
+    !fromLoc                               ? "กรุณาเลือก Location" :
+    lines.some(l => l.sku && parseInt(l.qty) > (stock[l.sku]?.[fromLoc] || 0)) ? "จำนวนเกินสต๊อกที่มี" : "";
+
   const submit = () => {
     if (!valid) return;
     setSubmitting(true);
@@ -466,6 +486,12 @@ function ScreenIssue() {
           >
             {submitting ? "กำลังบันทึก..." : <><Icon name="arrow-out" size={14} /> ยืนยันจ่ายออก {totalQty} ชิ้น</>}
           </button>
+
+          {!valid && !submitting && (
+            <div className="text-sm" style={{ color: "var(--warn)", textAlign: "center", marginTop: -4 }}>
+              ⚠ {issueHint}
+            </div>
+          )}
         </div>
       </div>
     </div>
